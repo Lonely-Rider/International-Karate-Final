@@ -1,0 +1,301 @@
+Graphics 1800,1024,32,0 ; Graphics mode
+SetBuffer BackBuffer()
+
+Global kuvannimi$
+Global leveys, korkeus, framet, kuva, kokokuva, frame
+Global x, y, frame2, a, b, ab, c, d, e, valittu, leve = 0, kore = 1, lev2, kor2, lev
+Global folder$ = CurrentDir()
+Global cRed, cGreen, cBlue, naps
+Dim lista$(0,1000)
+Global kieli = 1 ;suomi
+dir()
+haetiedot()
+
+
+;-------------PÄÄSILMUKKA-----------------------------------
+While Not KeyHit(1)
+	;kuvan tallennus
+	If (naps = 1) Then
+		uusikuva=CreateImage(leveys*leve,korkeus*kore,1)
+		SetBuffer ImageBuffer(uusikuva)
+	EndIf;----------
+	
+	;freimien piirto alkaa
+	Cls
+	While frame < framet
+	If KeyHit(1) Then End
+		If (frame <> valittu) Then 		;jos frame on valittu hiirellä, ja
+			DrawImage kuva, x, y, frame
+		Else
+			If (MouseDown(1)) Then		;hiirennappi on pohjassa, niin frame liikkuu mukana
+				DrawImage kuva,MouseX()-(leveys/2),MouseY()-(korkeus/2),valittu
+			Else
+				DrawImage kuva, x+x1, y+y1, valittu
+			EndIf
+		EndIf
+
+		frame = frame + 1
+		x = x + leveys
+		lev = lev + 1
+		If (x > (1000-leveys)) Then 
+			x = 0
+			y = y + korkeus
+			If (kor2 = 0) Then kore = kore + 1			;tallennetaan tiedot
+			If (lev2 = 0) Then leve = lev : lev2 = 1	;framemääristä pysty&vaakasuunnissa
+		EndIf
+	Wend
+	If (kor2 = 0) Then kor2 = 1
+
+	frame = 0 : x = 0 : y = 0
+
+	If (ruudut = 1 And naps = 0) Then ruudukko();jos ei kuvan tallennus ole juuri menossa
+	
+	If (KeyDown(59)) Then
+		If ruudut = 0 Then 
+			ruudut = 1
+		Else
+			ruudut = 0
+		EndIf
+		Delay 200
+		FlushKeys
+	EndIf
+	If (KeyDown(60)) Then
+		If rullaus = 0 Then 
+			rullaus = 1
+		Else
+			rullaus = 0
+		EndIf
+		Delay 200
+		FlushKeys
+	EndIf
+
+	If (naps = 1) Then  ;kuvan tallennus jatkuu
+		Flip
+		ok=SaveImage (uusikuva, kuvannimi$)
+		x1 = 0: y1 = 0
+		haetiedot()
+		naps = 0
+		SetBuffer BackBuffer()
+	EndIf				;------------------------
+
+	;freimien pyöritys nuolinäppäimillä
+	If (rullaus = 1) Then		
+		Color 0,0,0
+		Rect 200,350,leveys+15, korkeus+15
+		Color cRed,cGreen,cBlue
+		Rect 200+5,350+5,leveys+5, korkeus+5
+		DrawImage kuva,200+5,350+5,frame2
+
+		If (KeyDown(205)) Then
+			frame2 = frame2 + 1
+			If (frame2 >= framet) Then frame2 = 0
+		EndIf
+		If (KeyDown(203)) Then
+			frame2 = frame2 - 1
+			If (frame2 < 0) Then frame2 = framet
+		EndIf
+		Delay 80
+		Color 255,0,0
+	EndIf
+	
+	;lataa uusi kuva
+	If (KeyDown(61)) Then dir():Cls:haetiedot()
+
+	;hiiren osoitin
+	Rect MouseX(), MouseY(), 10, 10, 1
+
+	;yksittäisen framen siirto
+	If (KeyDown(75)) Then x1 = x1 - 1:Delay 100:FlushKeys()
+	If (KeyDown(77)) Then x1 = x1 + 1:Delay 100:FlushKeys()
+	If (KeyDown(72)) Then y1 = y1 - 1:Delay 100:FlushKeys()
+	If (KeyDown(80)) Then y1 = y1 + 1:Delay 100:FlushKeys()
+	;tallennus
+	If (KeyDown(29) And KeyDown(31)) Then
+	naps = 1
+		Delay 300
+		FlushKeys()
+	EndIf
+	
+	If (KeyDown(62)) Then haetiedot()
+	
+	;framen valinta hiirellä
+	If (MouseDown(1)) Then
+		tunnistus()
+		x1 = 0:y1 = 0
+		DrawImage kuva,MouseX()-(leveys/2),MouseY()-(korkeus/2),valittu	
+	EndIf
+
+	If (kieli = 1) Then
+		Text 0,0,"frame nro:"+valittu+"    F1-ruudukko / F2-esikatselu(käytä nuolia) / F3-lataa kuva / F4-freimien asetukset / CTRL+S-talleta"
+	Else
+		Text 0,0,"frame nr:"+valittu+"    F1-grid / F2-preview (arrow keys move) / F3-load image / F4-frame settings / CTRL+S-save"	
+	EndIf
+
+	Text 0,15,kuvannimi$
+	Flip
+Wend
+;--------------------------------------------------------------------------------------
+
+
+
+
+Function tunnistus()
+	a = 0
+	f = 0
+	g = 0
+	While (a < leve+1 And (Not KeyHit(59)))
+		a = a + 1
+		If (MouseX() < leveys * a) Then	
+			If (f = 0) Then c = a:f = 1; 			c = leveyssuunnassa monesko kuva
+			d = 0
+			While (d < kore+1 And (Not KeyHit(59)))
+				d = d + 1
+				If (MouseY() < korkeus * d) Then
+					If (g = 0) Then e = d:g = 1;	e = korkeussuunnassa monesko rivi
+				EndIf
+			Wend
+		EndIf
+	Wend
+	valittu = ((e - 1)*leve + c)-1
+End Function
+
+Function haetiedot()
+	kokokuva = LoadImage(kuvannimi$)
+	Cls
+	DrawImage kokokuva,x,y
+	
+	;apuruudukko freimien koon määrittämiseen
+	For auer = 0 To 800 Step 100
+		Line auer,0,auer,600
+	Next
+	For auer = 0 To 800 Step 10
+		Line auer,0,auer,5
+	Next
+	
+	For auer = 0 To 600 Step 100
+		Line 0,auer,800,auer
+	Next
+	For auer = 0 To 800 Step 10
+		Line 0,auer,5,auer
+	Next
+	;päättyy
+	
+	Flip
+	GetColor 1,1
+	cRed = ColorRed()
+	cGreen = ColorGreen()
+	cBlue = ColorBlue()
+	If (naps = 0) Then koko()
+	kuva = LoadAnimImage(kuvannimi$, leveys, korkeus, 0, framet)
+	MaskImage kuva,cRed,cGreen,cBlue
+	ClsColor cRed,cGreen,cBlue
+	Color 255,0,0
+End Function
+
+Function koko()
+	Color 255,0,0
+	l = leveys
+
+	If (kieli = 1) Then
+		leveys = Input("Anna framen leveys          "+leveys+"    ")
+	Else
+		leveys = Input("Type frame width           "+leveys+"    ")
+	EndIf
+
+	If (leveys = 0) Then leveys = l
+	k = korkeus
+	
+	If (kieli = 1) Then
+		korkeus = Input("Anna framen korkeus         "+korkeus+"    ")
+	Else
+		korkeus = Input("Type frame height           "+korkeus+"    ")
+	EndIf
+	
+	If (korkeus = 0) Then korkeus = k	
+	framet = 0
+
+	If (kieli = 1) Then
+		While framet < 2
+			framet = Input("Anna viimeisen framen numero"+framet+"    ")
+		Wend
+	Else
+		While framet < 2
+			framet = Input("Type last frame number      "+framet+"    ")
+		Wend
+	EndIf
+
+	lev2=0:kor2=0:leve=0:lev=0:frame=0:frame2=0
+End Function
+
+Function ruudukko()
+		a = 0
+		While (a*korkeus<=1200)
+			Line 0,korkeus*a,1024,korkeus*a
+			a = a + 1
+		Wend
+		a = 0
+		While(a*leveys<=1200)
+			Line leveys*a,0,leveys*a,768
+			a = a + 1
+		Wend
+End Function
+
+Function dir()
+	dir2()
+	While Not MouseDown(1)
+		Cls
+		Color 255,255,255
+		If (kieli = 1) Then
+			Text 0,0,"Hiirennappi 1 valitsee käsiteltävän kuvan, nappi 2 kopioi tiedoston."
+		Else
+			Text 0,0,"Mouse button 1 = select image     Mouse button 2 = copy file"
+		EndIf
+			
+		b = 0:d = 20:c = a
+		While (b < ab)
+			If MouseY() > (d) And MouseY() < (d+15) Then 
+				Color 255,0,0
+				kuvannimi$=lista$(0,b)
+				If (MouseDown(2)) Then
+					Cls
+
+					If (kieli = 1) Then
+						Text 250,80,"KOPIOI " + kuvannimi$ + " UUTEEN TIEDOSTOON"
+						Locate 250,100
+						uusikuva$ = Input("Anna uuden kuvan nimi, liitä myös .bmp (.png): ")
+					Else
+						Text 250,80,"COPY " + kuvannimi$ + " TO A NEW FILE"
+						Locate 250,100
+						uusikuva$ = Input("TYPE NEW FILE NAME, INCLUDING .BMP : ")
+					EndIf
+
+					CopyFile kuvannimi$, uusikuva$
+					dir2()
+				EndIf
+			Else
+				Color 255,255,255
+			EndIf
+			Text 0,d,lista$(0,b)
+			b = b + 1:c = c + 1:d = d + 15
+		Wend
+	
+		Rect MouseX(), MouseY(), 10, 10, 1
+		Flip
+	Wend
+	CloseDir myDir; Properly close the open folder
+End Function
+
+Function dir2()
+	ab = 0
+	myDir=ReadDir(folder$); Open up the directory, and assign the handle to myDir
+	Repeat	;Loop until Exit
+		file$=NextFile$(myDir); Assign the next entry in the folder to file$
+		If file$="" Then Exit; If there isn't another one, let's exit this loop
+		If FileType(folder$+"\"+file$) = 2 Then; Use FileType to determine if it is a folder (value 2) or a file and print results
+			;folder
+		Else
+			lista$(0,ab) = file$
+			ab = ab + 1
+		End If
+	Forever
+End Function

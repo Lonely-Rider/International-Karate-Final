@@ -1,2 +1,2 @@
-# International-Karate-Final
-One or two player and cpu or two cpu and player
+# ik
+a blitzbasic project started 2005, hoping to finish soon
